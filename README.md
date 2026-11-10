@@ -1,10 +1,8 @@
 # Backend-Harmony-SPA
 
-API backend construida con **FastAPI**. Este repositorio sirve como espacio de práctica para aplicar FastAPI sobre una arquitectura por capas.
+API backend construida con **FastAPI** para la gestión del sistema Harmony Spa, aplicando una **arquitectura por capas** (Domain, Infrastructure, API, Models, Schemas, Services, Repositories).
 
-> **Estado:** en exploración. El alcance funcional del proyecto aún está por definirse.
-
-<!-- TODO: cuando se defina el objetivo, reemplazar este bloque con 2-3 frases sobre qué problema resuelve y para quién. -->
+**Estado:** En exploración y desarrollo activo (Fase 2: Configuración de persistencia, ORM y migraciones).
 
 ---
 
@@ -13,25 +11,29 @@ API backend construida con **FastAPI**. Este repositorio sirve como espacio de p
 1. [Requisitos](#requisitos)
 2. [Instalación](#instalación)
 3. [Configuración](#configuración)
-4. [Ejecución](#ejecución)
-5. [Pruebas](#pruebas)
-6. [Estructura del proyecto](#estructura-del-proyecto)
-7. [Convención de commits](#convención-de-commits)
+4. [Migraciones de Base de Datos](#migraciones-de-base-de-datos)
+5. [Ejecución](#ejecución)
+6. [Pruebas](#pruebas)
+7. [Estructura del proyecto](#estructura-del-proyecto)
+8. [Convención de commits](#convención-de-commits)
 
 ---
 
 ## Requisitos
 
-- Python 3.10 o superior
-- pip
-- Git
+- **Python 3.10** o superior
+- **pip**
+- **Git**
+- **MySQL Server**
+
+---
 
 ## Instalación
 
 1. Clonar el repositorio:
 
    ```bash
-   git clone <URL_DEL_REPOSITORIO>
+   git clone https://github.com/tu-usuario/Backend-Harmony-SPA.git
    cd Backend-Harmony-SPA
    ```
 
@@ -39,92 +41,99 @@ API backend construida con **FastAPI**. Este repositorio sirve como espacio de p
 
    ```bash
    python -m venv venv
-
-   # Windows
+   # En Windows:
    venv\Scripts\activate
-
-   # Linux / macOS
+   # En macOS/Linux:
    source venv/bin/activate
    ```
 
-3. Instalar las dependencias:
-
+3. Instalar las dependencias del proyecto:
    ```bash
+   pip install --upgrade pip
    pip install -r requirements.txt
    ```
 
+---
+
 ## Configuración
 
-Las variables de entorno se manejan con un archivo `.env` (no se sube al repositorio).
+1. Crear un archivo `.env` en la raíz del proyecto basándose en el archivo de ejemplo `.env.example`:
 
-1. Copiar la plantilla:
-
-   ```bash
-   cp .env.example .env
+   ```env
+   APP_NAME=Harmony-SPA-API
+   DEBUG=True
+   DATABASE_URL=mysql+pymysql://usuario:contraseña@localhost:3306/harmony_spa_db
+   SECRET_KEY=tu_clave_secreta_aqui
    ```
 
-2. Completar los valores en `.env` según el entorno.
+2. Asegurar que el servicio de MySQL Server esté activo y la base de datos `harmony_spa_db` esté creada.
+
+---
+
+## Migraciones de Base de Datos
+
+Este proyecto utiliza migraciones de base de datos gestionadas (por ejemplo, Alembic). Para aplicar las migraciones pendientes:
+
+```bash
+alembic upgrade head
+```
+
+---
 
 ## Ejecución
 
-Levantar el servidor en modo desarrollo:
+Para iniciar el servidor de desarrollo local con Uvicorn:
 
 ```bash
 uvicorn app.main:app --reload
 ```
 
-Una vez en marcha, FastAPI genera la documentación automáticamente:
+La API estará disponible en `http://127.0.0.1:8000`. Puedes acceder a la documentación interactiva (Swagger UI) en `http://127.0.0.1:8000/docs`.
 
-| Recurso | URL |
-|---|---|
-| Swagger UI | http://127.0.0.1:8000/docs |
-| ReDoc | http://127.0.0.1:8000/redoc |
+---
 
 ## Pruebas
+
+Para ejecutar las pruebas automatizadas (con `pytest`):
 
 ```bash
 pytest
 ```
 
-Actualmente existe una prueba de salud (`test/test_health.py`) que verifica que la API responde.
+---
 
 ## Estructura del proyecto
 
-```
+```text
 Backend-Harmony-SPA/
+│
+├── alembic/              # Migraciones de base de datos
 ├── app/
-│   ├── api/              # Routers y endpoints
-│   ├── core/             # Configuración y elementos centrales
-│   ├── domain/           # Lógica y reglas del dominio
-│   ├── infrastructure/   # Conexiones externas (base de datos, servicios)
-│   ├── models/           # Modelos de datos
-│   ├── repositories/     # Acceso a datos
-│   ├── schemas/          # Esquemas de validación (Pydantic)
+│   ├── api/              # Endpoints y rutas de FastAPI
+│   ├── domain/           # Entidades y lógica de dominio
+│   ├── infrastructure/   # Conexión a BD y repositorios externos
+│   ├── models/           # Modelos ORM (SQLAlchemy)
+│   ├── schemas/          # Esquemas de validación y serialización (Pydantic)
 │   ├── services/         # Lógica de negocio
-│   ├── utils/            # Funciones de apoyo
-│   ├── __init__.py
 │   └── main.py           # Punto de entrada de la aplicación
-├── scripts/              # Scripts de utilidad
-├── test/                 # Pruebas automatizadas
-├── .env.example          # Plantilla de variables de entorno
-├── .gitignore
-├── README.md
-└── requirements.txt
+│
+├── .env                  # Variables de entorno locales
+├── requirements.txt      # Dependencias de Python
+└── README.md             # Documentación del proyecto
 ```
+
+---
 
 ## Convención de commits
 
-Se recomienda usar commits semánticos:
+Este proyecto sigue la especificación de **Conventional Commits**:
 
-| Prefijo | Uso |
-|---|---|
-| `feat:` | Nueva funcionalidad |
-| `fix:` | Corrección de errores |
-| `docs:` | Cambios en documentación |
-| `test:` | Pruebas |
-| `refactor:` | Reestructuración sin cambiar comportamiento |
-| `chore:` | Tareas de mantenimiento |
+- `feat:` Nueva característica o funcionalidad.
+- `fix:` Corrección de un error (bug).
+- `docs:` Cambios exclusivos en la documentación.
+- `style:` Cambios en formato, espacios, punto y coma, etc. (sin afectar código).
+- `refactor:` Refactorización de código que no corrige bugs ni añade características.
+- `test:` Adición o corrección de pruebas.
+- `chore:` Tareas de mantenimiento, actualización de dependencias, etc.
 
-Ejemplo: `docs: agregar README inicial del proyecto`
-
----
+Ejemplo: `docs(readme): actualizar estructura y migraciones bd`
