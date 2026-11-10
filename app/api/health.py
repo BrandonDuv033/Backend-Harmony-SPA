@@ -9,7 +9,9 @@ router = APIRouter(tags=["Health"])
 
 @router.get("/health", summary="Verificar que la API está activa")
 def health_check() -> dict[str, str]:
-    return {"status": "ok", "service": "harmony-spa-api"}
+    return {"status": "ok",
+             "service": "harmony-spa-api"
+        }
 
 
 @router.get(
