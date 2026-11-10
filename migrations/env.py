@@ -8,10 +8,6 @@ from app.infrastructure.database.base import Base
 
 from app.models import User, UserSession
 
-# Importamos los modelos para registrarlos en Base.metadata.
-# Los crearemos en los siguientes pasos.
-# from app.models import User, UserSession
-
 config = context.config
 
 if config.config_file_name is not None:
@@ -57,7 +53,7 @@ def run_migrations_online() -> None:
         with context.begin_transaction():
             context.run_migrations()
 
-        if context.isofflinemode():
-            run_migrations_offline()
-        else:
-            run_migrations_online
+if context.is_offline_mode():
+    run_migrations_offline()
+else:
+    run_migrations_online()
