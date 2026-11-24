@@ -31,20 +31,20 @@ La arquitectura contempla los siguientes componentes:
 
 ### 🚧 Estado del proyecto
 
-![Fase 3](https://img.shields.io/badge/Fase%203-Autenticación%20y%20Persistencia-blue?style=flat-square)
+![Fase 3](https://img.shields.io/badge/Fase%203-Autenticación%20y%20gestión%20de%20usuarios-blue?style=flat-square)
 
-**Fase 3: Autenticación y persistencia de datos**
+**Fase 3: Autenticación y gestión de usuarios**
 
 Actualmente, el proyecto cuenta con:
 
-- Hashing y verificación de contraseñas mediante **Argon2id**.
-- Inicialización del único usuario `SUPER_ADMIN`.
-- Autenticación mediante tokens **JWT**.
+- Autenticación mediante JWT y hashing de contraseñas con Argon2id.
 - Gestión y revocación de sesiones en MySQL.
-- Protección de rutas y control de inactividad.
-- Implementación completa de los modelos ORM mediante **SQLAlchemy**.
-- Definición de relaciones entre usuarios, perfiles, procedimientos y reservas.
-- Migraciones de base de datos gestionadas con **Alembic**.
+- Protección de rutas mediante autenticación y autorización por roles.
+- Implementación de modelos ORM y relaciones entre entidades.
+- Gestión de usuarios y perfiles según su rol.
+- Operaciones CRUD mediante endpoints REST.
+- Paginación y filtrado de usuarios.
+- Control de acceso exclusivo para el rol `SUPER_ADMIN` en el módulo de usuarios.
 
 ---
 
@@ -57,10 +57,11 @@ Actualmente, el proyecto cuenta con:
 5. [Modelos ORM y persistencia](#️-modelos-orm-y-persistencia)
 6. [Inicialización del SuperAdmin](#-inicialización-del-superadmin)
 7. [Autenticación y gestión de sesiones](#-autenticación-y-gestión-de-sesiones)
-8. [Ejecución](#️-ejecución)
-9. [Pruebas](#-pruebas)
-10. [Estructura del proyecto](#-estructura-del-proyecto)
-11. [Convención de commits](#-convención-de-commits)
+8. [Gestión de usuarios](#-gestión-de-usuarios)
+9. [Ejecución](#️-ejecución)
+10. [Pruebas](#-pruebas)
+11. [Estructura del proyecto](#-estructura-del-proyecto)
+12. [Convención de commits](#-convención-de-commits)
 
 ---
 
@@ -373,6 +374,90 @@ Los endpoints se encuentran implementados en `app/api/v1/auth.py` e integrados m
 
 ---
 
+## 👥 Gestión de usuarios
+
+El sistema incorpora un módulo de administración de usuarios que permite crear, consultar, actualizar y gestionar el estado de las cuentas, siguiendo una arquitectura por capas.
+
+### 1. Esquemas de validación
+
+Se implementaron esquemas Pydantic en `app/schemas/user.py` para validar la información recibida y estructurar las respuestas.
+
+| Esquema | Función |
+|:--|:--|
+| `UserCreate` | Validar la creación de usuarios. |
+| `UserUpdate` | Gestionar modificaciones parciales. |
+| `UserStatusUpdate` | Actualizar el estado de una cuenta. |
+| `ClientProfileCreate` | Validar información del perfil del cliente. |
+| `EmployeeProfileCreate` | Validar información del perfil del empleado. |
+| `UserResponse` | Estructurar la respuesta pública del usuario. |
+
+**Reglas de validación:**
+
+- Los usuarios con rol `CLIENTE` deben tener un perfil de cliente.
+- Los usuarios con rol `ADMIN` o `ESTETICISTA` deben tener un perfil de empleado.
+- La creación del rol `SUPER_ADMIN` está restringida desde la API.
+- Las respuestas excluyen `password_hash` para proteger información sensible.
+
+### 2. Capa de repositorio
+
+El archivo `app/repositories/user_repository.py` centraliza las operaciones de acceso a datos mediante SQLAlchemy.
+
+Entre sus funcionalidades se encuentran:
+
+- `get_by_id`: consultar un usuario por su identificador.
+- `get_by_email`: buscar un usuario por su correo electrónico.
+- `list_users`: obtener listados de usuarios.
+
+También permite realizar búsquedas filtradas por rol y estado de actividad, utilizando paginación mediante los parámetros `limit` y `skip`.
+
+### 3. Capa de servicio
+
+El archivo `app/services/user_service.py` contiene la lógica de negocio del módulo.
+
+Sus principales responsabilidades son:
+
+- Validar la unicidad de los correos electrónicos.
+- Encriptar contraseñas mediante Argon2id.
+- Crear usuarios junto con sus perfiles correspondientes mediante transacciones atómicas.
+- Gestionar la actualización de información y estados.
+- Revocar automáticamente las sesiones activas cuando una cuenta pasa a estado inactivo (`is_active=False`).
+
+### 4. Control de acceso
+
+Se implementó la dependencia `require_super_admin`, encargada de restringir las operaciones del módulo exclusivamente a usuarios autenticados con el rol `SUPER_ADMIN`.
+
+De esta manera, se evita que otros roles puedan acceder a las operaciones administrativas de gestión de usuarios.
+
+### 5. Endpoints de gestión de usuarios
+
+Las rutas se encuentran implementadas en `app/api/v1/users.py` e integradas en el router principal de la API v1.
+
+| Método | Endpoint | Descripción |
+|:--|:--|:--|
+| `POST` | `/api/v1/users` | Crear usuarios y sus perfiles. |
+| `GET` | `/api/v1/users` | Listar usuarios con filtros y paginación. |
+| `GET` | `/api/v1/users/{user_id}` | Consultar un usuario específico. |
+| `PATCH` | `/api/v1/users/{user_id}` | Actualizar parcialmente un usuario. |
+| `PATCH` | `/api/v1/users/{user_id}/status` | Cambiar el estado de una cuenta y revocar sus sesiones al desactivarla. |
+
+### 6. Verificación
+
+Se realizaron verificaciones para comprobar el funcionamiento del módulo:
+
+**Compilación del paquete:**
+
+```bash
+python -m compileall app
+```
+
+**Ejecución del servidor:**
+
+```bash
+uvicorn app.main:app --reload
+```
+
+Posteriormente, se realizaron pruebas de los endpoints desde **Swagger UI**, verificando las operaciones y sus restricciones de acceso.
+
 ## ▶️ Ejecución
 
 Para iniciar el servidor de desarrollo local, utiliza **Uvicorn**:
@@ -417,8 +502,9 @@ Backend-Harmony-SPA/
 ├── app/
 │   ├── api/
 │   │   ├── v1/
-│   │   │   ├── auth.py            # Endpoints de autenticación
-│   │   │   └── router.py          # Router principal de API v1
+│   │   │   ├── auth.py              # Endpoints de autenticación
+│   │   │   ├── users.py             # Endpoints de gestión de usuarios
+│   │   │   └── router.py            # Router principal de API v1
 │   │   │
 │   │   └── dependencies.py        # Dependencias de autenticación
 │   │
@@ -439,13 +525,17 @@ Backend-Harmony-SPA/
 │   │   ├── procedure.py                # Procedimientos
 │   │   ├── procedure_session.py        # Sesiones de procedimientos
 │   │   └── appointment.py              # Citas y reservas
-│   ├── schemas/
-│   │   ├── auth.py                # Esquemas de autenticación
-│   │   ├── user.py                # Esquemas de usuario
-│   │   └── __init__.py            # Exportación centralizada
+│   ├── repositories/
+│   │   └── user_repository.py       # Consultas y persistencia de usuarios
 │   │
-│   ├── services/
-│   │   └── auth_service.py        # Servicio de autenticación
+│   ├── schemas/
+│   │   ├── auth.py                  # Esquemas de autenticación
+│   │   ├── user.py                  # Esquemas de usuarios y perfiles
+│   │   └── __init__.py              # Exportación centralizada
+│   │
+│   └── services/
+│   │   ├── auth_service.py          # Servicio de autenticación
+│   │   └── user_service.py          # Lógica de gestión de usuarios
 │   │
 │   └── main.py                    # Punto de entrada de FastAPI
 │
