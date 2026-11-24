@@ -4,6 +4,7 @@ from app.api.v1.router import api_router
 from app.core.config import settings
 from app.api.health import router as health_router
 
+
 def create_application() -> FastAPI:
     application = FastAPI(
         title=settings.APP_NAME,
