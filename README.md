@@ -31,18 +31,20 @@ La arquitectura contempla los siguientes componentes:
 
 ### 🚧 Estado del proyecto
 
-![Fase](https://img.shields.io/badge/Fase%20-Autenticación-blue?style=flat-square)
+![Fase 3](https://img.shields.io/badge/Fase%203-Autenticación%20y%20Persistencia-blue?style=flat-square)
 
-**Fase: Autenticación – Parte II**
+**Fase 3: Autenticación y persistencia de datos**
 
-Actualmente, el proyecto cuenta con la implementación de los siguientes componentes de seguridad:
+Actualmente, el proyecto cuenta con:
 
 - Hashing y verificación de contraseñas mediante **Argon2id**.
-- Inicialización del único usuario con rol `SUPER_ADMIN`.
+- Inicialización del único usuario `SUPER_ADMIN`.
 - Autenticación mediante tokens **JWT**.
 - Gestión y revocación de sesiones en MySQL.
-- Protección de rutas mediante dependencias de autenticación.
-- Control de inactividad con expiración de sesión a los 30 minutos.
+- Protección de rutas y control de inactividad.
+- Implementación completa de los modelos ORM mediante **SQLAlchemy**.
+- Definición de relaciones entre usuarios, perfiles, procedimientos y reservas.
+- Migraciones de base de datos gestionadas con **Alembic**.
 
 ---
 
@@ -52,12 +54,13 @@ Actualmente, el proyecto cuenta con la implementación de los siguientes compone
 2. [Instalación](#-instalación)
 3. [Configuración](#️-configuración)
 4. [Migraciones de base de datos](#️-migraciones-de-base-de-datos)
-5. [Inicialización del SuperAdmin](#-inicialización-del-superadmin)
-6. [Autenticación y gestión de sesiones](#-autenticación-y-gestión-de-sesiones)
-7. [Ejecución](#️-ejecución)
-8. [Pruebas](#-pruebas)
-9. [Estructura del proyecto](#-estructura-del-proyecto)
-10. [Convención de commits](#-convención-de-commits)
+5. [Modelos ORM y persistencia](#️-modelos-orm-y-persistencia)
+6. [Inicialización del SuperAdmin](#-inicialización-del-superadmin)
+7. [Autenticación y gestión de sesiones](#-autenticación-y-gestión-de-sesiones)
+8. [Ejecución](#️-ejecución)
+9. [Pruebas](#-pruebas)
+10. [Estructura del proyecto](#-estructura-del-proyecto)
+11. [Convención de commits](#-convención-de-commits)
 
 ---
 
@@ -210,6 +213,72 @@ Por lo tanto, este proceso está diseñado exclusivamente para inicializar el ad
 
 ---
 
+## 🗃️ Modelos ORM y persistencia
+
+El proyecto utiliza **SQLAlchemy ORM** para representar las entidades del sistema y gestionar su persistencia en MySQL.
+
+La capa de modelos contempla las siguientes entidades:
+
+### 1. Enumeraciones de dominio
+
+Se implementó `AppointmentStatus` en `app/domain/enums/appointment_status.py`, encargado de controlar los estados del ciclo de vida de las reservas:
+
+| Estado | Descripción |
+|:--|:--|
+| `PENDIENTE` | Reserva pendiente de confirmación. |
+| `CONFIRMADA` | Reserva confirmada. |
+| `EN_PROCESO` | Procedimiento en ejecución. |
+| `COMPLETADA` | Procedimiento finalizado. |
+| `CANCELADA` | Reserva cancelada. |
+| `NO_ASISTIO` | El cliente no asistió. |
+
+### 2. Modelos del sistema
+
+| Modelo | Responsabilidad |
+|:--|:--|
+| `User` | Información principal de los usuarios. |
+| `UserSession` | Registro y control de sesiones. |
+| `ClientProfile` | Información adicional de los clientes. |
+| `EmployeeProfile` | Información laboral de los empleados. |
+| `Procedure` | Catálogo de procedimientos y servicios. |
+| `ProcedureSession` | Sesiones programadas de cada procedimiento. |
+| `Appointment` | Gestión de citas y reservas. |
+
+### 3. Relaciones y restricciones
+
+Se implementaron relaciones entre las entidades para mantener la integridad de los datos:
+
+- **User – ClientProfile:** relación uno a uno (1:1).
+- **User – EmployeeProfile:** relación uno a uno (1:1).
+- **Appointment:** vincula al cliente, procedimiento y esteticista asignada.
+- **Procedure – ProcedureSession:** permite definir las sesiones que componen un procedimiento.
+
+También se incorporaron restricciones mediante `CheckConstraint`:
+
+- Los precios de los procedimientos no pueden ser negativos.
+- La duración de los procedimientos debe ser positiva.
+- La fecha de finalización de una reserva debe ser posterior a su fecha de inicio.
+
+### 4. Registro central de modelos
+
+Todos los modelos se consolidan en:
+
+```text
+app/models/__init__.py
+```
+
+Esto permite centralizar su importación y garantizar que las siete tablas estén registradas en `Base.metadata`, facilitando su reconocimiento durante la generación de migraciones con Alembic.
+
+### 5. Migraciones
+
+Se generó y aplicó la migración correspondiente para crear las nuevas tablas y relaciones en MySQL.
+
+Para aplicar futuras migraciones pendientes:
+
+```bash
+alembic upgrade head
+```
+
 ## 🔑 Autenticación y gestión de sesiones
 
 El sistema implementa un mecanismo de autenticación basado en **JSON Web Tokens (JWT)**, permitiendo identificar usuarios, validar sus sesiones y proteger los endpoints de la API.
@@ -358,8 +427,18 @@ Backend-Harmony-SPA/
 │   │   └── security.py            # Seguridad y hashing Argon2id
 │   │
 │   ├── domain/                    # Entidades y lógica de dominio
+│   │   └── enums/
+│   │       └── appointment_status.py  # Estados de las reservas
 │   ├── infrastructure/            # Conexión a BD e infraestructura externa
 │   ├── models/                    # Modelos ORM (SQLAlchemy)
+│   │   ├── __init__.py                 # Registro central de modelos
+│   │   ├── user.py                     # Usuario
+│   │   ├── user_session.py             # Sesiones de usuario
+│   │   ├── client_profile.py           # Perfil del cliente
+│   │   ├── employee_profile.py         # Perfil del empleado
+│   │   ├── procedure.py                # Procedimientos
+│   │   ├── procedure_session.py        # Sesiones de procedimientos
+│   │   └── appointment.py              # Citas y reservas
 │   ├── schemas/
 │   │   ├── auth.py                # Esquemas de autenticación
 │   │   ├── user.py                # Esquemas de usuario
