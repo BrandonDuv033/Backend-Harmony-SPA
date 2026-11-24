@@ -33,6 +33,7 @@ class User(Base):
     __table_args__ = (
         UniqueConstraint("super_admin_slot", name="uq_users_single_super_admin"),
         Index("ix_users_role_active", "role", "is_active"),
+        Index("ix_users_last_name", "last_name"),
     )
 
     # Identificador principal
@@ -75,6 +76,22 @@ class User(Base):
         nullable=False,
         server_default=func.current_timestamp(),
         onupdate=func.current_timestamp(),
+    )
+
+    client_profile = relationship(
+        "ClientProfile",
+        back_populates="user",
+        uselist=False,
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+
+    employee_profile = relationship(
+        "EmployeeProfile",
+        back_populates="user",
+        uselist=False,
+        cascade="all, delete-orphan",
+        passive_deletes=True,
     )
 
     # Restricción para permitir un solo SUPER_ADMIN.
